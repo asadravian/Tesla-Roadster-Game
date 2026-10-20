@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Roadster Rush · A Rocket-Thrust Highway Run</title>
+  <meta name="description" content="A free browser game inspired by the Tesla Roadster. Weave through neon traffic, fire the rocket thrusters to hop over cars and chase a top score. Built with Claude Code.">
+  <meta name="theme-color" content="#070722">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Roadster Rush · Rocket-Thrust Highway Run">
+  <meta property="og:description" content="A 3D browser game inspired by the Tesla Roadster. Play free, no install. Built with Claude Code.">
+  <meta property="og:url" content="https://asadravian.github.io/Tesla-Roadster-Game/">
+  <meta property="og:image" content="https://asadravian.github.io/Tesla-Roadster-Game/assets/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.min.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game" aria-label="Roadster Rush game view"></canvas>
+  <div id="flash" class="flash" aria-hidden="true"></div>
+
+  <!-- Garage / start screen -->
+  <section id="menu" class="overlay show menu" aria-labelledby="title">
+    <header class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>Roadster Rush</span>
+      <button class="icon-btn btn-sound" aria-label="Toggle sound" aria-pressed="true"><span class="ico-sound"></span></button>
+    </header>
+
+    <div class="menu-main">
+      <p class="eyebrow">Rocket-thrust highway run</p>
+      <h1 id="title">Roadster<br><span>Rush</span></h1>
+      <p class="lede">Weave through neon traffic at 300+ km/h. Fire the cold-gas thrusters to lift off and hop clean over cars.</p>
+
+      <div class="garage glass">
+        <div class="garage-row">
+          <span class="label">Paint</span>
+          <span id="paintName" class="paint-name">Deep Cherry</span>
+        </div>
+        <div id="swatches" class="swatches" role="group" aria-label="Choose paint"></div>
+      </div>
+
+      <button id="playBtn" class="btn-primary">
+        <span>Launch</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <p class="best-line">Personal best <strong id="menuBest">0</strong></p>
+    </div>
+
+    <ul class="controls glass" aria-label="Controls">
+      <li><span class="keys"><kbd>←</kbd><kbd>→</kbd></span> or <kbd>A</kbd><kbd>D</kbd> steer</li>
+      <li><span class="keys"><kbd class="wide">Space</kbd></span> hold for rocket thrust</li>
+      <li><span class="dot cyan"></span> energy cells refill thrust</li>
+      <li><span class="dot gold"></span> near misses build a combo</li>
+    </ul>
+
+    <footer class="credits">
+      <span>Built with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a> by <a href="https://github.com/asadravian" target="_blank" rel="noopener">@asadravian</a> · <a href="https://github.com/asadravian/Tesla-Roadster-Game" target="_blank" rel="noopener">Source</a></span>
+      <span class="disclaimer">Independent fan project inspired by the Tesla Roadster. Not affiliated with or endorsed by Tesla, Inc.</span>
+    </footer>
+  </section>
+
+  <!-- In-game HUD -->
+  <section id="hud" class="hud" aria-live="off">
+    <div class="hud-tl">
+      <div class="score-label">Score</div>
+      <div id="score" class="score">0</div>
+      <div id="mult" class="chip"></div>
+    </div>
+    <div class="hud-tc">
+      <div id="zoneName" class="zone">Sunset Boulevard</div>
+      <div id="dist" class="dist">0.00 km</div>
+    </div>
+    <div class="hud-tr">
+      <button class="icon-btn btn-sound" aria-label="Toggle sound" aria-pressed="true"><span class="ico-sound"></span></button>
+      <button id="pauseBtn" class="icon-btn" aria-label="Pause"><span class="ico-pause"></span></button>
+    </div>
+
+    <div class="hud-bottom glass">
+      <button class="gauge" aria-label="Switch speed units">
+        <svg viewBox="0 0 128 128" aria-hidden="true">
+          <defs>
+            <linearGradient id="gGrad" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#29f0ff"/>
+              <stop offset="0.6" stop-color="#a66bff"/>
+              <stop offset="1" stop-color="#ff2bd6"/>
+            </linearGradient>
+          </defs>
+          <circle cx="64" cy="64" r="54" class="track" transform="rotate(135 64 64)"/>
+          <circle id="gaugeArc" cx="64" cy="64" r="54" class="arc" transform="rotate(135 64 64)"/>
+        </svg>
+        <span id="speed" class="speed">0</span>
+        <span id="units" class="units">KM/H</span>
+      </button>
+      <div class="meters">
+        <div class="meter-label"><span>Thrust</span><span id="shields" class="shields" aria-label="Shields"></span></div>
+        <div id="energy" class="energy"><div id="energyFill" class="energy-fill"></div></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+  </section>
+
+  <div id="countdown" class="countdown" aria-live="assertive"></div>
+
+  <!-- Touch controls -->
+  <div id="touch" class="touch" aria-hidden="true">
+    <div class="steer">
+      <button data-hold="left" class="tbtn"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button data-hold="right" class="tbtn"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <button data-hold="thrust" class="tbtn boost"><span>Thrust</span></button>
+  </div>
+
+  <!-- Pause -->
+  <section id="pause" class="overlay dim" aria-label="Paused">
+    <div class="card glass">
+      <h2>Paused</h2>
+      <button id="resumeBtn" class="btn-primary"><span>Resume</span></button>
+      <div class="row">
+        <button id="restartBtn" class="btn-ghost">Restart</button>
+        <button id="garageBtn" class="btn-ghost">Garage</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game over -->
+  <section id="over" class="overlay dim" aria-labelledby="overTitle">
+    <div class="card glass wide">
+      <p class="eyebrow" id="overTitle">Run complete</p>
+      <div id="overScore" class="big-score">0</div>
+      <dl class="stats">
+        <div><dt>Distance</dt><dd id="statDist">0</dd></div>
+        <div><dt>Top speed</dt><dd id="statTop">0</dd></div>
+        <div><dt>Near misses</dt><dd id="statNear">0</dd></div>
+        <div><dt>Rocket hops</dt><dd id="statJumps">0</dd></div>
+        <div><dt>Furthest zone</dt><dd id="statZone">-</dd></div>
+        <div><dt>Best</dt><dd id="statBest">0</dd></div>
+      </dl>
+      <button id="againBtn" class="btn-primary"><span>Race again</span></button>
+      <div class="row">
+        <button id="shareBtn" class="btn-ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.75h4V21H3zM9.5 9.75h3.8v1.6h.06c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.77 2.65 4.77 6.1V21h-4v-4.9c0-1.17-.02-2.68-1.63-2.68-1.64 0-1.89 1.28-1.89 2.6V21h-4z"/></svg>Share</button>
+        <button id="copyBtn" class="btn-ghost">Copy link</button>
+        <button id="garageBtn2" class="btn-ghost">Garage</button>
+      </div>
+    </div>
+  </section>
+
+  <noscript><p class="noscript">Roadster Rush needs JavaScript and WebGL to run.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
