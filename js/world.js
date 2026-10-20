@@ -108,7 +108,8 @@ const roadFrag = /* glsl */ `
     // Headlight pool in front of the car.
     float d = -2.0 - z;
     float spread = 0.55 + max(d, 0.0) * 0.13;
-    float hl = exp(-pow((x - uCarX) / spread, 2.0)) * smoothstep(48.0, 4.0, d) * smoothstep(-0.5, 2.5, d);
+    float hx = (x - uCarX) / spread;
+    float hl = exp(-hx * hx) * smoothstep(48.0, 4.0, d) * smoothstep(-0.5, 2.5, d);
     col += hl * vec3(1.0, 0.95, 0.88) * 0.3 * (1.0 - clamp(uCarY / 2.5, 0.0, 0.8));
 
     // Contact shadow and underglow.

@@ -1,0 +1,9 @@
+name = "roadster-rush-leaderboard"
+main = "index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "roadster-rush-leaderboard"
+database_id = "b7d9f0b9-4f47-48cc-b93e-fa71d85cfe6d"

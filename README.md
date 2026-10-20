@@ -22,8 +22,10 @@ Tips: thrust doubles your score and lifts you over traffic, but it drains energy
 - Real-time 3D with Three.js: a procedurally modelled roadster with clearcoat paint, HDR bloom, a synthwave sky, a scrolling neon grid and speed streaks
 - Rocket thrusters with shader flames, hover physics and a chase camera that widens its field of view with speed
 - Four zones (Sunset Boulevard, Neon Canyon, Red Planet, Orbit Run) that blend their colour palettes as you drive
+- The car is modelled on the Roadster revealed in October 2026: low angular wedge, black lower body, gold-tinted glass, Ano White paint, active rear wing, thin-spoke wheels and cold-gas thrusters
+- Global leaderboard: type any nickname at the end of a run, no login (Cloudflare Worker + D1, see `worker/`)
 - Garage with five paint finishes, km/h or mph speedometer, saved best score
-- Synthesised sound: electric motor whine, wind, thrust roar and a small synthwave soundtrack, all made with the Web Audio API (no audio files)
+- Synthesised sound: electric motor whine, wind, thrust roar and an original synthwave soundtrack (pads, arpeggios, bass, delay and reverb), all made with the Web Audio API (no audio files)
 - Works on desktop and phones, supports gamepads, and lowers resolution automatically on slower devices
 - No build step and no external runtime requests apart from Google Fonts: Three.js is vendored in `vendor/`
 
@@ -51,6 +53,8 @@ js/main.js      game loop, input, obstacles, scoring, camera, post-processing
 js/car.js       the roadster model and thruster flames
 js/world.js     sky, road, grid, mountains, roadside props, zone palettes
 js/audio.js     procedural sound and music
+js/leaderboard.js  global leaderboard client
+worker/         Cloudflare Worker and D1 schema for the leaderboard
 vendor/three/   Three.js r170 (MIT licence)
 ```
 

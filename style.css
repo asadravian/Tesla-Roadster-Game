@@ -80,6 +80,7 @@ a:hover { text-decoration-color: var(--cyan); }
   padding-bottom: calc(clamp(16px, 3vw, 36px) + var(--safe-b));
   background: linear-gradient(90deg, rgba(5, 4, 22, 0.78) 0%, rgba(5, 4, 22, 0.35) 38%, transparent 60%);
   pointer-events: none;
+  overflow-y: auto;
 }
 .menu > * { pointer-events: auto; }
 .brand {
@@ -105,7 +106,7 @@ a:hover { text-decoration-color: var(--cyan); }
   align-self: center;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: clamp(10px, 2.2vh, 18px);
   max-width: 460px;
   animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -122,7 +123,7 @@ h1 {
   margin: 0;
   font-family: var(--display);
   font-weight: 700;
-  font-size: clamp(54px, 8.5vw, 104px);
+  font-size: clamp(44px, min(8.5vw, 12.5vh), 104px);
   line-height: 0.88;
   letter-spacing: -0.035em;
 }
@@ -475,6 +476,57 @@ kbd.wide { min-width: 56px; }
 .stats dt { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
 .stats dd { margin: 4px 0 0; font-family: var(--display); font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; }
 
+/* ---------- Leaderboard ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.link-btn {
+  margin-left: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cyan);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lb { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.lb[hidden], .link-btn[hidden] { display: none; }
+.lb-form { display: flex; gap: 8px; }
+.lb-form input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.lb-form input:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.lb-status { margin: 0; min-height: 18px; font-size: 13px; color: var(--gold); }
+.lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.lb-list li { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; padding: 7px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); font-size: 14px; }
+.lb-list li.me { background: rgba(41, 240, 255, 0.14); outline: 1px solid rgba(41, 240, 255, 0.4); }
+.lb-list li.empty { display: block; color: var(--ink-faint); }
+.lb-list .rank { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.lb-list li:nth-child(1) .rank { color: var(--gold); }
+.lb-list .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-list .pts { font-family: var(--display); font-weight: 600; font-variant-numeric: tabular-nums; }
+.card { max-height: calc(100% - 8px); overflow-y: auto; }
+#over .lb-list { max-height: 196px; overflow-y: auto; }
+@media (max-height: 820px) {
+  .card { padding: 18px 22px; gap: 10px; }
+  .big-score { font-size: 56px; }
+  .stats { gap: 6px; margin: 0; }
+  .stats div { padding: 6px; }
+  .stats dd { font-size: 14px; }
+  #over .lb-list { max-height: 150px; }
+}
+
 /* ---------- Touch ---------- */
 .touch {
   position: fixed;
@@ -554,6 +606,19 @@ kbd.wide { min-width: 56px; }
   .meters { width: 130px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card { padding: 22px 18px; }
+}
+/* Shorter laptop screens and zoomed-in browsers */
+@media (min-width: 761px) and (max-height: 820px) {
+  .menu { padding-top: 14px; padding-bottom: 14px; }
+  .lede { font-size: 14px; }
+  .garage { padding: 10px 14px; gap: 8px; }
+  .swatch { width: 28px; height: 28px; }
+  .btn-primary { height: 50px; }
+  .controls { padding: 8px 14px; gap: 4px 16px; }
+  .credits { margin-top: 8px; }
+}
+@media (min-width: 761px) and (max-height: 640px) {
+  .controls { display: none; }
 }
 @media (max-height: 520px) and (orientation: landscape) {
   .menu-main h1 { font-size: 48px; }

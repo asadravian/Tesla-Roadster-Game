@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <title>Roadster Rush · A Rocket-Thrust Highway Run</title>
   <meta name="author" content="Muhammad (Asad)">
-  <meta name="description" content="A free browser game inspired by the Tesla Roadster. Weave through neon traffic, fire the rocket thrusters to hop over cars and chase a top score. Built with Claude Code.">
+  <meta name="description" content="A free browser game inspired by the Tesla Roadster. Weave through neon traffic, fire the rocket thrusters to hop over cars and chase a top score on the global leaderboard.">
   <meta name="theme-color" content="#070722">
 
   <link rel="canonical" href="https://asadravian.github.io/Tesla-Roadster-Game/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Roadster Rush · Rocket-Thrust Highway Run">
-  <meta property="og:description" content="A 3D browser game inspired by the Tesla Roadster. Play free, no install. Built with Claude Code.">
+  <meta property="og:description" content="A 3D browser game inspired by the Tesla Roadster. Play free, no install, and climb the global leaderboard.">
   <meta property="og:url" content="https://asadravian.github.io/Tesla-Roadster-Game/">
   <meta property="og:image" content="https://asadravian.github.io/Tesla-Roadster-Game/assets/og-image.jpg">
   <meta property="og:image:width" content="1200">
@@ -53,7 +53,7 @@
       <div class="garage glass">
         <div class="garage-row">
           <span class="label">Paint</span>
-          <span id="paintName" class="paint-name">Deep Cherry</span>
+          <span id="paintName" class="paint-name">Ano White</span>
         </div>
         <div id="swatches" class="swatches" role="group" aria-label="Choose paint"></div>
       </div>
@@ -62,7 +62,7 @@
         <span>Launch</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <p class="best-line">Personal best <strong id="menuBest">0</strong></p>
+      <p class="best-line">Personal best <strong id="menuBest">0</strong><button id="boardBtn" class="link-btn lb-only" hidden>Global leaderboard</button></p>
     </div>
 
     <ul class="controls glass" aria-label="Controls">
@@ -73,7 +73,7 @@
     </ul>
 
     <footer class="credits">
-      <span>Created by <a href="https://github.com/asadravian" target="_blank" rel="noopener">Muhammad (Asad)</a> with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a> · <a href="https://github.com/asadravian/Tesla-Roadster-Game" target="_blank" rel="noopener">Source</a></span>
+      <span>Vibe coded by <a href="https://github.com/asadravian" target="_blank" rel="noopener">Muhammad (Asad)</a> · <a href="https://github.com/asadravian/Tesla-Roadster-Game" target="_blank" rel="noopener">Source code</a></span>
       <span class="disclaimer">Independent fan project inspired by the Tesla Roadster. Not affiliated with or endorsed by Tesla, Inc.</span>
     </footer>
   </section>
@@ -155,12 +155,30 @@
         <div><dt>Furthest zone</dt><dd id="statZone">-</dd></div>
         <div><dt>Best</dt><dd id="statBest">0</dd></div>
       </dl>
+      <div class="lb lb-only" hidden>
+        <form id="lbForm" class="lb-form" autocomplete="off">
+          <label for="lbName" class="sr-only">Nickname</label>
+          <input id="lbName" name="nickname" maxlength="16" placeholder="Your nickname" spellcheck="false" autocomplete="nickname">
+          <button type="submit" id="lbSubmit" class="btn-ghost">Post score</button>
+        </form>
+        <p id="lbStatus" class="lb-status" role="status"></p>
+        <ol id="lbList" class="lb-list"></ol>
+      </div>
       <button id="againBtn" class="btn-primary"><span>Race again</span></button>
       <div class="row">
         <button id="shareBtn" class="btn-ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.75h4V21H3zM9.5 9.75h3.8v1.6h.06c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.77 2.65 4.77 6.1V21h-4v-4.9c0-1.17-.02-2.68-1.63-2.68-1.64 0-1.89 1.28-1.89 2.6V21h-4z"/></svg>Share</button>
         <button id="copyBtn" class="btn-ghost">Copy link</button>
         <button id="garageBtn2" class="btn-ghost">Garage</button>
       </div>
+    </div>
+  </section>
+
+  <!-- Global leaderboard -->
+  <section id="board" class="overlay dim" aria-labelledby="boardTitle">
+    <div class="card glass">
+      <h2 id="boardTitle">Global leaderboard</h2>
+      <ol id="boardList" class="lb-list"></ol>
+      <button id="boardClose" class="btn-ghost">Close</button>
     </div>
   </section>
 

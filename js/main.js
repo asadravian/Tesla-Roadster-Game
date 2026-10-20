@@ -3,10 +3,12 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createRoadster, PAINTS } from './car.js';
 import { createWorld, ZONES, LANE_W, ROAD_EDGE } from './world.js';
 import { AudioEngine } from './audio.js';
+import * as board from './leaderboard.js';
 
 // ---------- Tuning ----------
 const TRAFFIC_V = 20; // m/s, everything in the obstacle stream moves at this speed
@@ -53,6 +55,17 @@ const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
 });
 const composer = new EffectComposer(renderer, rt);
 composer.addPass(new RenderPass(scene, camera));
+// Scrub NaN/Inf pixels before bloom; one bad pixel would otherwise blur into a black screen.
+composer.addPass(new ShaderPass({
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      bvec4 bad = bvec4(isnan(c.r) || isinf(c.r), isnan(c.g) || isinf(c.g), isnan(c.b) || isinf(c.b), isnan(c.a) || isinf(c.a));
+      gl_FragColor = any(bad) ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(64.0));
+    }`,
+}));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.55, 0.35, 1.0);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
@@ -259,7 +272,7 @@ const input = { left: false, right: false, thrust: false, steer: 0 };
 function resetRun() {
   for (let i = active.length - 1; i >= 0; i--) recycle(i);
   Object.assign(game, {
-    t: 0, distance: 0, speed: 0, topSpeed: 0, score: 0,
+    t: 0, distance: 0, speed: 0, topSpeed: 0, score: 0, runTime: 0, posted: false,
     x: 0, vx: 0, y: 0, vy: 0, energy: 70, thrust: 0, thrusting: false, lockout: false,
     shields: 3, invuln: 0, shake: 0, nextRow: 60, relDist: 0,
     combo: 1, comboTimer: 0, nearMisses: 0, jumps: 0, cells: 0,
@@ -345,11 +358,11 @@ setUnits(game.units);
 
 // Garage paint picker.
 const swatches = $('swatches');
-let paintId = store.get('rr_paint', 'red');
+let paintId = store.get('rr_paint', 'white');
 function setPaint(id) {
   const p = PAINTS.find((q) => q.id === id) || PAINTS[0];
   paintId = p.id;
-  car.setPaint(p.color);
+  car.setPaint(p);
   $('paintName').textContent = p.name;
   for (const b of swatches.children) b.setAttribute('aria-pressed', String(b.dataset.id === p.id));
   store.set('rr_paint', p.id);
@@ -461,6 +474,12 @@ function gameOver() {
   $('statZone').textContent = ZONES[game.zone % ZONES.length].name;
   $('statBest').textContent = Math.floor(game.best).toLocaleString();
   ui.touch.classList.remove('show');
+  if (board.enabled()) {
+    lb.status.textContent = '';
+    lb.submit.disabled = false;
+    lb.name.value = store.get('rr_name', '');
+    loadBoard(lb.list);
+  }
   setTimeout(() => {
     if (game.state === 'over') {
       show(ui.hud, false);
@@ -469,6 +488,54 @@ function gameOver() {
     }
   }, 1100);
 }
+
+// ---------- Global leaderboard ----------
+const lb = { form: $('lbForm'), name: $('lbName'), submit: $('lbSubmit'), status: $('lbStatus'), list: $('lbList') };
+if (board.enabled()) for (const el of document.querySelectorAll('.lb-only')) el.hidden = false;
+
+async function loadBoard(ol) {
+  try {
+    board.renderList(ol, await board.fetchTop(), store.get('rr_name', ''));
+  } catch {
+    ol.innerHTML = '';
+    lb.status.textContent = 'Leaderboard is offline right now.';
+  }
+}
+
+lb.form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (game.posted) return;
+  const name = lb.name.value.trim();
+  if (!/^[A-Za-z0-9 _.\-]{2,16}$/.test(name)) {
+    lb.status.textContent = 'Use 2 to 16 letters, numbers, spaces, dots, dashes or underscores.';
+    return;
+  }
+  lb.submit.disabled = true;
+  lb.status.textContent = 'Posting...';
+  try {
+    const res = await board.submitScore({
+      name,
+      score: Math.floor(game.score),
+      distance: Math.floor(game.distance),
+      topSpeed: Math.floor(game.topSpeed),
+      duration: Math.round(game.runTime * 10) / 10,
+    });
+    game.posted = true;
+    store.set('rr_name', name);
+    lb.status.textContent = `You are #${res.rank} in the world.`;
+    board.renderList(lb.list, res.top, name);
+  } catch (err) {
+    lb.status.textContent = err.message;
+    lb.submit.disabled = false;
+  }
+});
+
+$('boardBtn').addEventListener('click', () => {
+  show($('board'), true);
+  $('boardList').innerHTML = '<li class="empty">Loading...</li>';
+  loadBoard($('boardList'));
+});
+$('boardClose').addEventListener('click', () => show($('board'), false));
 
 $('playBtn').addEventListener('click', startRun);
 $('againBtn').addEventListener('click', startRun);
@@ -480,7 +547,7 @@ $('pauseBtn').addEventListener('click', pauseGame);
 
 const shareUrl = location.href.split('#')[0].split('?')[0];
 $('shareBtn').addEventListener('click', async () => {
-  const text = `I just hit ${Math.floor(game.score).toLocaleString()} points and ${fmtSpeed(game.topSpeed)} ${game.units === 'mph' ? 'mph' : 'km/h'} in Roadster Rush, a browser game built with Claude Code. Can you beat it?`;
+  const text = `I just hit ${Math.floor(game.score).toLocaleString()} points and ${fmtSpeed(game.topSpeed)} ${game.units === 'mph' ? 'mph' : 'km/h'} in Roadster Rush. Can you beat it?`;
   try { await navigator.clipboard.writeText(`${text}\n${shareUrl}`); toast('Score copied. Paste it into your post'); } catch { /* clipboard blocked */ }
   window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener');
 });
@@ -509,6 +576,7 @@ const KEYMAP = {
   Space: 'thrust', ArrowUp: 'thrust', KeyW: 'thrust', ShiftLeft: 'thrust', ShiftRight: 'thrust',
 };
 addEventListener('keydown', (e) => {
+  if (e.target instanceof HTMLInputElement) return; // typing a nickname
   const a = KEYMAP[e.code];
   if (a) {
     if (game.state === 'play' || game.state === 'countdown') e.preventDefault();
@@ -630,7 +698,10 @@ function update(dt) {
 
   const dz = game.speed * dt;
   game.distance += dz;
-  if (playing) game.score += dz * (game.thrust > 0.5 ? 2 : 1);
+  if (playing) {
+    game.score += dz * (game.thrust > 0.5 ? 2 : 1);
+    game.runTime += dt;
+  }
 
   // Zones and milestones.
   if (playing) {
@@ -783,7 +854,7 @@ function updateCamera(dt) {
   if (Math.abs(ox) + Math.abs(oy) > 0.5) camera.setViewOffset(innerWidth, innerHeight, ox, oy, innerWidth, innerHeight);
   else camera.clearViewOffset();
   camera.updateProjectionMatrix();
-  bloom.strength = 0.55 + game.thrust * 0.25;
+  bloom.strength = 0.55 + game.thrust * 0.15;
   world.followCamera(camera);
 }
 
