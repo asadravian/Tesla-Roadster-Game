@@ -57,5 +57,7 @@ vendor/three/   Three.js r170 (MIT licence)
 ## Credits
 
 Designed and built with [Claude Code](https://claude.com/claude-code).
+Everything is generated in code: the car model, the visuals, even the soundtrack. My role was product direction, design judgement and testing, with AI doing the heavy lifting.
+Loved it? Don't forget to star or build your own and share with me via [LinkedIn](https://www.linkedin.com/in/masad1)
 
 Independent fan project inspired by the Tesla Roadster. Not affiliated with or endorsed by Tesla, Inc. No logos or trademarks are used in the game.
