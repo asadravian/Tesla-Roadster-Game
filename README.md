@@ -56,6 +56,6 @@ vendor/three/   Three.js r170 (MIT licence)
 
 ## Credits
 
-Designed and built with [Claude Code](https://claude.com/claude-code).
+Created by **Muhammad (Asad)** ([@asadravian](https://github.com/asadravian)): concept, game design, art direction and testing. Built in collaboration with [Claude Code](https://claude.com/claude-code).
 
 Independent fan project inspired by the Tesla Roadster. Not affiliated with or endorsed by Tesla, Inc. No logos or trademarks are used in the game.
