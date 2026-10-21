@@ -96,11 +96,11 @@ a:hover { text-decoration-color: var(--cyan); }
 }
 .brand .btn-music { margin-left: auto; }
 .brand-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  background: conic-gradient(from 200deg, var(--cyan), var(--violet), var(--magenta), var(--cyan));
-  box-shadow: 0 0 18px rgba(166, 107, 255, 0.7);
+  width: 34px;
+  height: 34px;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 0 18px rgba(166, 107, 255, 0.55);
 }
 .menu-main {
   align-self: center;
