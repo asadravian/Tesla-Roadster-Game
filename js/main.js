@@ -393,6 +393,29 @@ function setMuted(m) {
 for (const b of document.querySelectorAll('.btn-sound')) b.addEventListener('click', () => setMuted(!muted));
 setMuted(muted);
 
+let musicOn = store.get('rr_music', '1') === '1';
+function setMusic(on) {
+  musicOn = on;
+  store.set('rr_music', on ? '1' : '0');
+  audio.setMusic(on);
+  for (const b of document.querySelectorAll('.btn-music')) {
+    b.setAttribute('aria-pressed', String(on));
+    b.title = on ? 'Music on' : 'Music off';
+  }
+}
+for (const b of document.querySelectorAll('.btn-music')) b.addEventListener('click', () => setMusic(!musicOn));
+setMusic(musicOn);
+
+// Browsers only allow audio after a user gesture: start the soundtrack on the first one.
+function wakeAudio() {
+  audio.init();
+  audio.resume();
+  audio.setMuted(muted);
+  if (game.state !== 'paused') audio.startMusic();
+}
+addEventListener('pointerdown', wakeAudio, { once: true });
+addEventListener('keydown', wakeAudio, { once: true });
+
 // ---------- Flow ----------
 let camBlend = 0; // 0 = showroom orbit, 1 = chase
 function startRun() {

@@ -33,13 +33,13 @@ function pl(keys, t) {
 // black lower body, which sweeps upwards towards the rear as on the real car.
 function section(t) {
   const z = -LEN / 2 + LEN * t;
-  const w = pl([[0, 0.86], [0.04, 0.93], [0.17, 0.99], [0.4, 0.95], [0.62, 0.97], [0.8, 1.01], [0.96, 0.98], [1, 0.92]], t);
+  const w = pl([[0, 0.88], [0.17, 0.99], [0.4, 0.95], [0.62, 0.97], [0.8, 1.01], [0.96, 0.98], [1, 0.92]], t);
   let yb = 0.13;
   let sill = pl([[0, 0.17], [0.3, 0.19], [1, 0.24]], t);
   let belt = pl([[0, 0.26], [0.3, 0.28], [0.55, 0.33], [0.75, 0.42], [0.9, 0.5], [1, 0.52]], t);
-  let crease = pl([[0, 0.4], [0.05, 0.48], [0.17, 0.64], [0.3, 0.66], [0.6, 0.7], [0.8, 0.76], [0.95, 0.7], [1, 0.66]], t);
-  let shoulder = pl([[0, 0.41], [0.05, 0.5], [0.17, 0.67], [0.3, 0.7], [0.6, 0.75], [0.78, 0.82], [0.95, 0.74], [1, 0.68]], t);
-  const top = pl([[0, 0.41], [0.05, 0.47], [0.2, 0.6], [0.28, 0.64], [0.6, 0.74], [0.78, 0.82], [0.95, 0.74], [1, 0.68]], t);
+  let crease = pl([[0, 0.4], [0.17, 0.74], [0.3, 0.7], [0.6, 0.7], [0.8, 0.76], [0.95, 0.7], [1, 0.66]], t);
+  let shoulder = pl([[0, 0.41], [0.17, 0.76], [0.3, 0.72], [0.6, 0.75], [0.78, 0.82], [0.95, 0.74], [1, 0.68]], t);
+  const top = pl([[0, 0.41], [0.2, 0.74], [0.28, 0.72], [0.6, 0.74], [0.78, 0.82], [0.95, 0.74], [1, 0.68]], t);
 
   // Wheel arches: lift the underside around each wheel and swell the fender over it.
   for (const wz of WHEEL_Z) {
@@ -49,10 +49,15 @@ function section(t) {
       yb = Math.max(yb, ay);
       sill = Math.max(sill, ay + 0.01);
       belt = Math.max(belt, ay + 0.02);
-      crease = Math.max(crease, ay + 0.02);
-      shoulder = Math.max(shoulder, crease + 0.02);
+      // The nose is a clean straight wedge, so only the rear fender swells over its wheel.
+      if (wz > 0) {
+        crease = Math.max(crease, ay + 0.02);
+        shoulder = Math.max(shoulder, crease + 0.02);
+      }
     }
   }
+  // Keep the body's top surface tucked under the glasshouse so it never pokes through.
+  const roofline = t > 0.19 && t < 0.77 ? Math.min(top, shoulder - 0.04) : top;
   return {
     z,
     pts: [
@@ -62,8 +67,8 @@ function section(t) {
       [w, belt],
       [w, crease],
       [w - 0.13, shoulder],
-      [w * 0.5, Math.max(top, shoulder - 0.02)],
-      [0, top],
+      [w * 0.5, t > 0.19 && t < 0.77 ? roofline : Math.max(top, shoulder - 0.02)],
+      [0, roofline],
     ],
   };
 }
@@ -72,7 +77,7 @@ function section(t) {
 function greenhouse(t) {
   const z = -LEN / 2 + LEN * t;
   const body = section(t).pts;
-  const base = body[5][1] - 0.01;
+  const base = body[5][1] - 0.04;
   const gw = pl([[0.2, 0.8], [0.4, 0.68], [0.6, 0.65], [0.76, 0.72]], t);
   const roof = pl([[0.2, base], [0.42, 1.04], [0.58, 1.05], [0.76, base + 0.01]], t);
   const h = roof - base;
@@ -187,14 +192,6 @@ export function createRoadster() {
   diffuser.position.set(0, 0.17, LEN / 2 - 0.06);
   diffuser.rotation.x = -0.3;
   tilt.add(diffuser);
-
-  // Twin hood vents in front of the windscreen.
-  for (const sx of [-1, 1]) {
-    const vent = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.012, 0.42), black);
-    vent.position.set(sx * 0.36, 0.555, at(0.13));
-    vent.rotation.x = -0.18;
-    tilt.add(vent);
-  }
 
   // Door shut lines and the amber side marker behind the front wheel.
   const amber = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 1.2, 0.1) });
