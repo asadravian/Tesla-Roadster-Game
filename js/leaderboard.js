@@ -1,13 +1,14 @@
 // Global leaderboard client. Set API to the deployed Worker URL (see worker/README.md);
 // while it is empty the game hides every leaderboard control.
-export const API = '';
+export const API = 'https://roadster-rush-leaderboard.asadlondon3.workers.dev';
 
 export const enabled = () => !!API;
 
 export async function fetchTop() {
   const r = await fetch(`${API}/scores`);
-  if (!r.ok) throw new Error('Leaderboard unavailable');
-  return (await r.json()).top;
+  const data = r.ok ? await r.json().catch(() => null) : null;
+  if (!data || !Array.isArray(data.top)) throw new Error('Leaderboard unavailable');
+  return data.top;
 }
 
 export async function submitScore(run) {
@@ -18,6 +19,7 @@ export async function submitScore(run) {
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || 'Could not submit score');
+  if (!Array.isArray(data.top)) throw new Error('Leaderboard is offline right now.');
   return data;
 }
 
