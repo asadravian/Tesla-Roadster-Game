@@ -9,10 +9,11 @@ export const PAINTS = [
   { id: 'black', name: 'Stealth Black', color: '#121317', metalness: 0.4, roughness: 0.3, clearcoat: 1 },
 ];
 
+// Proportions traced from Tesla's official 2026 Roadster side view (tesla.com/roadster).
 const LEN = 4.5;
-const WHEEL_R = 0.36;
-const WHEEL_Z = [-1.42, 1.38];
-const ARCH_R = 0.47;
+const WHEEL_R = 0.34;
+const WHEEL_Z = [-1.47, 1.35];
+const ARCH_R = 0.37;
 
 // Piecewise-linear lookup over [t, value] keys.
 function pl(keys, t) {
@@ -28,55 +29,60 @@ function pl(keys, t) {
 }
 
 // Right-hand half of the body cross-section at t (0 = nose, 1 = tail).
-// Points run from the underside centre to the roof centre; the first four are the black lower body.
+// Points run from the underside centre to the roof centre. The first four form the
+// black lower body, which sweeps upwards towards the rear as on the real car.
 function section(t) {
   const z = -LEN / 2 + LEN * t;
-  const w = pl([[0, 0.8], [0.07, 0.94], [0.24, 0.97], [0.45, 0.92], [0.7, 1.0], [0.92, 0.97], [1, 0.9]], t);
-  let yb = 0.14;
-  let sill = 0.28;
-  let belt = pl([[0, 0.3], [0.08, 0.44], [0.5, 0.5], [0.8, 0.58], [1, 0.6]], t);
-  let side = pl([[0, 0.4], [0.08, 0.58], [0.3, 0.7], [0.45, 0.72], [0.72, 0.86], [1, 0.8]], t);
-  const top = pl([[0, 0.38], [0.06, 0.5], [0.36, 0.72], [0.42, 0.76], [0.72, 0.84], [0.95, 0.82], [1, 0.77]], t);
+  const w = pl([[0, 0.86], [0.04, 0.93], [0.17, 0.99], [0.4, 0.95], [0.62, 0.97], [0.8, 1.01], [0.96, 0.98], [1, 0.92]], t);
+  let yb = 0.13;
+  let sill = pl([[0, 0.17], [0.3, 0.19], [1, 0.24]], t);
+  let belt = pl([[0, 0.26], [0.3, 0.28], [0.55, 0.33], [0.75, 0.42], [0.9, 0.5], [1, 0.52]], t);
+  let crease = pl([[0, 0.4], [0.05, 0.48], [0.17, 0.64], [0.3, 0.66], [0.6, 0.7], [0.8, 0.76], [0.95, 0.7], [1, 0.66]], t);
+  let shoulder = pl([[0, 0.41], [0.05, 0.5], [0.17, 0.67], [0.3, 0.7], [0.6, 0.75], [0.78, 0.82], [0.95, 0.74], [1, 0.68]], t);
+  const top = pl([[0, 0.41], [0.05, 0.47], [0.2, 0.6], [0.28, 0.64], [0.6, 0.74], [0.78, 0.82], [0.95, 0.74], [1, 0.68]], t);
 
-  // Wheel arches: lift the underside around each wheel, and swell the fenders over it.
+  // Wheel arches: lift the underside around each wheel and swell the fender over it.
   for (const wz of WHEEL_Z) {
     const dz = z - wz;
     if (Math.abs(dz) < ARCH_R) {
       const ay = WHEEL_R + Math.sqrt(ARCH_R * ARCH_R - dz * dz);
       yb = Math.max(yb, ay);
-      sill = Math.max(sill, ay + 0.02);
-      belt = Math.max(belt, ay + 0.05);
-      side = Math.max(side, belt + 0.09);
+      sill = Math.max(sill, ay + 0.01);
+      belt = Math.max(belt, ay + 0.02);
+      crease = Math.max(crease, ay + 0.02);
+      shoulder = Math.max(shoulder, crease + 0.02);
     }
   }
   return {
     z,
     pts: [
       [0, yb],
-      [w - 0.1, yb],
+      [w - 0.12, yb],
       [w - 0.03, sill],
       [w, belt],
-      [w - 0.08, side],
-      [w * 0.52, (side + top) / 2 + 0.01],
+      [w, crease],
+      [w - 0.13, shoulder],
+      [w * 0.5, Math.max(top, shoulder - 0.02)],
       [0, top],
     ],
   };
 }
 
+// Low, steeply raked greenhouse with a short flat roof, set on the body shoulder.
 function greenhouse(t) {
   const z = -LEN / 2 + LEN * t;
   const body = section(t).pts;
-  const base = body[4][1] - 0.01;
-  const gw = pl([[0.35, 0.72], [0.5, 0.75], [0.8, 0.6]], t);
-  const roof = pl([[0.35, base], [0.5, 1.06], [0.62, 1.1], [0.81, base + 0.01]], t);
+  const base = body[5][1] - 0.01;
+  const gw = pl([[0.2, 0.8], [0.4, 0.68], [0.6, 0.65], [0.76, 0.72]], t);
+  const roof = pl([[0.2, base], [0.42, 1.04], [0.58, 1.05], [0.76, base + 0.01]], t);
   const h = roof - base;
   return {
     z,
     pts: [
       [gw, base],
-      [gw * 0.76, base + h * 0.82],
-      [gw * 0.36, roof],
-      [0, roof + 0.01 * Math.min(1, h * 10)],
+      [gw * 0.86, base + h * 0.62],
+      [gw * 0.72, roof],
+      [0, roof + 0.005],
     ],
   };
 }
@@ -146,73 +152,99 @@ export function createRoadster() {
   const tilt = new THREE.Group(); // body roll and pitch live here, wheels stay planted
   group.add(tilt);
 
-  const N = 46;
+  const N = 60;
   const body = [];
   const glassSt = [];
   for (let i = 0; i <= N; i++) body.push(section(i / N));
-  for (let i = 0; i <= 18; i++) glassSt.push(greenhouse(0.35 + (0.46 * i) / 18));
+  for (let i = 0; i <= 20; i++) glassSt.push(greenhouse(0.2 + (0.56 * i) / 20));
+  const at = (t) => -LEN / 2 + LEN * t;
 
   const paint = new THREE.MeshPhysicalMaterial({ flatShading: true, side: THREE.DoubleSide });
   const lower = new THREE.MeshPhysicalMaterial({
-    color: '#0c0d10', metalness: 0.3, roughness: 0.45, clearcoat: 0.4, flatShading: true, side: THREE.DoubleSide,
+    color: '#0b0c0f', metalness: 0.3, roughness: 0.4, clearcoat: 0.5, flatShading: true, side: THREE.DoubleSide,
   });
-  const gold = new THREE.MeshPhysicalMaterial({
-    color: '#7a5a24', metalness: 1, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05,
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: '#4a3618', metalness: 0.9, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.03,
     flatShading: true, side: THREE.DoubleSide,
   });
-  const titanium = new THREE.MeshStandardMaterial({ color: '#9da1a8', metalness: 1, roughness: 0.3 });
+  const black = new THREE.MeshStandardMaterial({ color: '#050506', roughness: 0.5, metalness: 0.2 });
 
-  tilt.add(new THREE.Mesh(loft(body, 3, 6, true), paint));
+  tilt.add(new THREE.Mesh(loft(body, 3, 7, true), paint));
   tilt.add(new THREE.Mesh(loft(body, 0, 3, true), lower));
-  tilt.add(new THREE.Mesh(loft(glassSt, 0, 3, false), gold));
+  tilt.add(new THREE.Mesh(loft(glassSt, 0, 3, false), glass));
 
-  // Underfloor and diffuser fill the space between the arches.
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.16, LEN - 0.5), lower);
-  floor.position.y = 0.24;
+  // Underfloor, front splitter, black tail panel and diffuser.
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.14, LEN - 0.6), lower);
+  floor.position.y = 0.22;
   tilt.add(floor);
-  const diffuser = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.3), lower);
-  diffuser.position.set(0, 0.2, LEN / 2 - 0.05);
-  diffuser.rotation.x = -0.25;
+  const splitter = new THREE.Mesh(new THREE.BoxGeometry(1.74, 0.03, 0.3), lower);
+  splitter.position.set(0, 0.14, -LEN / 2 + 0.2);
+  tilt.add(splitter);
+  const tailPanel = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.48, 0.04), lower);
+  tailPanel.position.set(0, 0.38, LEN / 2 + 0.01);
+  tilt.add(tailPanel);
+  const diffuser = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 0.36), lower);
+  diffuser.position.set(0, 0.17, LEN / 2 - 0.06);
+  diffuser.rotation.x = -0.3;
   tilt.add(diffuser);
 
-  // Titanium accent along the beltline.
+  // Twin hood vents in front of the windscreen.
   for (const sx of [-1, 1]) {
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 1.5), titanium);
-    strip.position.set(sx * 0.93, 0.52, 0.05);
-    tilt.add(strip);
+    const vent = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.012, 0.42), black);
+    vent.position.set(sx * 0.36, 0.555, at(0.13));
+    vent.rotation.x = -0.18;
+    tilt.add(vent);
+  }
+
+  // Door shut lines and the amber side marker behind the front wheel.
+  const amber = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 1.2, 0.1) });
+  for (const sx of [-1, 1]) {
+    for (const [t, h] of [[0.29, 0.44], [0.62, 0.42]]) {
+      const cut = new THREE.Mesh(new THREE.BoxGeometry(0.006, h, 0.012), black);
+      const s = section(t).pts;
+      cut.position.set(sx * (s[3][0] + 0.004), (s[3][1] + s[4][1]) / 2, at(t));
+      tilt.add(cut);
+    }
+    const s = section(0.27).pts;
+    const marker = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.025, 0.14), amber);
+    marker.position.set(sx * (s[3][0] + 0.006), 0.6, at(0.27));
+    tilt.add(marker);
   }
 
   // Light signatures (values above 1 feed the bloom pass).
   const white = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.9, 3.3) });
-  const lightBar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.02, 0.02), white);
-  lightBar.position.set(0, 0.3, -LEN / 2 - 0.005);
+  const lightBar = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.016, 0.02), white);
+  lightBar.position.set(0, 0.405, -LEN / 2 - 0.005);
   tilt.add(lightBar);
   for (const sx of [-1, 1]) {
-    // Concealed corner headlights: thin blades in the nose corners.
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.018, 0.04), white);
-    blade.position.set(sx * 0.66, 0.4, -LEN / 2 + 0.02);
-    blade.rotation.set(-0.3, sx * 0.35, sx * -0.08);
+    // Concealed headlights: thin blades at the nose corners.
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.014, 0.03), white);
+    blade.position.set(sx * 0.74, 0.43, -LEN / 2 + 0.06);
+    blade.rotation.set(-0.2, sx * 0.3, 0);
     tilt.add(blade);
   }
   const red = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.06, 0.1) });
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.66, 0.026, 0.02), red);
-  tail.position.set(0, 0.66, LEN / 2 + 0.01);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.76, 0.02, 0.02), red);
+  tail.position.set(0, 0.63, LEN / 2 + 0.03);
   tilt.add(tail);
 
-  // Active rear wing on two titanium struts.
+  // The signature tall rear wing: wide blade with end plates on swan-neck struts.
   const wing = new THREE.Group();
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.03, 0.3), lower);
-  blade.position.z = 0.04;
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.04, 0.6), paint);
   wing.add(blade);
   for (const sx of [-1, 1]) {
-    const strut = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.08), titanium);
-    strut.position.set(sx * 0.5, -0.11, 0);
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.5), lower);
+    plate.position.set(sx * 0.95, -0.06, 0.02);
+    wing.add(plate);
+    const strut = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.1), lower);
+    strut.position.set(sx * 0.42, -0.16, -0.12);
+    strut.rotation.x = 0.35;
     wing.add(strut);
   }
-  wing.position.set(0, 0.86, LEN / 2 - 0.22);
+  wing.position.set(0, 1.0, at(0.94));
   tilt.add(wing);
 
-  // Cold-gas thrusters behind the rear plate.
+  // Cold-gas thrusters set into the tail panel.
   const nozzleMat = new THREE.MeshStandardMaterial({ color: '#2a2d35', metalness: 0.9, roughness: 0.25 });
   const nozzleGeo = new THREE.CylinderGeometry(0.09, 0.12, 0.2, 20, 1, true);
   nozzleGeo.rotateX(Math.PI / 2);
@@ -237,10 +269,10 @@ export function createRoadster() {
   const flames = [];
   for (const sx of [-1, 1]) {
     const n = new THREE.Mesh(nozzleGeo, nozzleMat);
-    n.position.set(sx * 0.4, 0.42, LEN / 2 + 0.02);
+    n.position.set(sx * 0.42, 0.4, LEN / 2 + 0.04);
     tilt.add(n);
     const f = new THREE.Mesh(flameGeo, flameMat);
-    f.position.set(sx * 0.4, 0.42, LEN / 2 + 0.1);
+    f.position.set(sx * 0.42, 0.4, LEN / 2 + 0.12);
     f.scale.set(1, 1, 0.001);
     f.visible = false;
     tilt.add(f);
@@ -250,33 +282,39 @@ export function createRoadster() {
   thrustLight.position.set(0, 0.6, LEN / 2 + 0.7);
   tilt.add(thrustLight);
 
-  // Wheels: low-profile tyre, dark titanium rim with thin spokes.
+  // Wheels: black tyre, pale aero disc and six black twin spokes.
   const tyreMat = new THREE.MeshStandardMaterial({ color: '#0a0a0c', roughness: 0.85 });
-  const rimMat = new THREE.MeshStandardMaterial({ color: '#3b3e44', metalness: 1, roughness: 0.3 });
-  const spokeMat = new THREE.MeshStandardMaterial({ color: '#b9bdc4', metalness: 1, roughness: 0.2 });
-  const tyreGeo = new THREE.CylinderGeometry(WHEEL_R, WHEEL_R, 0.32, 36);
+  const discMat = new THREE.MeshStandardMaterial({ color: '#d3d6db', metalness: 0.5, roughness: 0.35 });
+  const spokeMat = new THREE.MeshStandardMaterial({ color: '#0c0d10', metalness: 0.6, roughness: 0.25 });
+  const tyreGeo = new THREE.CylinderGeometry(WHEEL_R, WHEEL_R, 0.34, 40);
   tyreGeo.rotateZ(Math.PI / 2);
-  const barrelGeo = new THREE.CylinderGeometry(0.27, 0.27, 0.33, 36, 1, true);
-  barrelGeo.rotateZ(Math.PI / 2);
-  const hubGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.34, 16);
+  const discGeo = new THREE.CylinderGeometry(0.29, 0.29, 0.02, 40);
+  discGeo.rotateZ(Math.PI / 2);
+  const hubGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.05, 16);
   hubGeo.rotateZ(Math.PI / 2);
-  const spokeGeo = new THREE.BoxGeometry(0.02, 0.25, 0.022);
-  spokeGeo.translate(0, 0.135, 0);
+  const spokeGeo = new THREE.BoxGeometry(0.02, 0.27, 0.05);
+  spokeGeo.translate(0, 0.14, 0);
   const wheels = [];
   for (const z of WHEEL_Z) {
     for (const sx of [-1, 1]) {
       const w = new THREE.Group();
       w.rotation.order = 'YXZ'; // spin first, then steer
       w.add(new THREE.Mesh(tyreGeo, tyreMat));
-      w.add(new THREE.Mesh(barrelGeo, rimMat));
-      w.add(new THREE.Mesh(hubGeo, spokeMat));
-      for (let k = 0; k < 12; k++) {
-        const s = new THREE.Mesh(spokeGeo, spokeMat);
-        s.position.x = sx * 0.15;
-        s.rotation.x = (k / 12) * Math.PI * 2;
-        w.add(s);
+      const disc = new THREE.Mesh(discGeo, discMat);
+      disc.position.x = sx * 0.165;
+      w.add(disc);
+      const hub = new THREE.Mesh(hubGeo, spokeMat);
+      hub.position.x = sx * 0.18;
+      w.add(hub);
+      for (let k = 0; k < 6; k++) {
+        for (const d of [-0.09, 0.09]) {
+          const s = new THREE.Mesh(spokeGeo, spokeMat);
+          s.position.x = sx * 0.18;
+          s.rotation.x = (k / 6) * Math.PI * 2 + d;
+          w.add(s);
+        }
       }
-      w.position.set(sx * 0.84, WHEEL_R, z);
+      w.position.set(sx * 0.86, WHEEL_R, z);
       group.add(w);
       wheels.push(w);
     }
@@ -305,8 +343,8 @@ export function createRoadster() {
       // Wing rises for downforce in corners and at lower speed, stows flat for top speed.
       const want = thrust > 0.2 ? 0 : Math.max(Math.min(Math.abs(vx) / 8, 1), speed < 60 ? 1 : 0.2);
       deploy += (want - deploy) * Math.min(1, dt * 4);
-      wing.position.y = 0.86 + deploy * 0.16;
-      wing.rotation.x = deploy * 0.22;
+      wing.position.y = 0.94 + deploy * 0.08;
+      wing.rotation.x = -0.05 - deploy * 0.14;
 
       flameUniforms.uTime.value = flameT;
       flameUniforms.uPower.value = thrust;
